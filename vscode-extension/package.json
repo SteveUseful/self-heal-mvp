@@ -1,0 +1,53 @@
+{
+  "name": "self-healing-code",
+  "displayName": "Self-Healing Code",
+  "description": "AI-powered bug detection and auto-fix for your code",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:self-healing.detectBugs",
+    "onCommand:self-healing.autoFix"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "self-healing.detectBugs",
+        "title": "🔍 Detect Bugs",
+        "category": "Self-Healing"
+      },
+      {
+        "command": "self-healing.autoFix",
+        "title": "🛠️ Auto-Fix Bugs",
+        "category": "Self-Healing"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "self-healing.detectBugs",
+          "group": "navigation"
+        },
+        {
+          "command": "self-healing.autoFix",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "typescript": "^4.9.4"
+  }
+}

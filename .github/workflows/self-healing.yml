@@ -1,0 +1,119 @@
+name: Self-Healing Code Review
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  self-healing:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        npm ci
+        cd demo-app && npm ci
+        cd ../self-healing && npm ci
+        
+    - name: Run tests
+      id: tests
+      run: |
+        cd demo-app
+        npm test
+      continue-on-error: true
+      
+    - name: Self-healing analysis
+      if: steps.tests.outcome == 'failure'
+      id: healing
+      run: |
+        cd self-healing
+        export LLM_MODE="openai"
+        export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
+        node agent.js
+      continue-on-error: true
+      
+    - name: Create issue for failed tests
+      if: steps.tests.outcome == 'failure'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { data: issues } = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: ['self-healing']
+          });
+          
+          const existingIssue = issues.find(issue => 
+            issue.title.includes(`Self-healing: ${context.sha}`)
+          );
+          
+          if (!existingIssue) {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Self-healing: ${context.sha}`,
+              body: `
+                ## 🐛 Self-Healing Analysis Required
+                
+                **Commit:** ${context.sha}
+                **Branch:** ${context.ref}
+                **Triggered by:** ${context.eventName}
+                
+                ### Test Results
+                Tests failed and require AI-powered analysis.
+                
+                ### Next Steps
+                1. Review the failing tests
+                2. Apply suggested fixes
+                3. Re-run tests to verify
+                
+                ### Self-Healing Output
+                \`\`\`
+                ${process.env.HEALING_OUTPUT || 'No healing output available'}
+                \`\`\`
+              `,
+              labels: ['self-healing', 'bug', 'automated']
+            });
+          }
+          
+    - name: Comment on PR
+      if: github.event_name == 'pull_request' && steps.tests.outcome == 'failure'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const comment = `
+          ## 🔍 Self-Healing Analysis
+          
+          Tests are failing in this PR. Our AI-powered self-healing system has analyzed the code and suggests the following fixes:
+          
+          ### Suggested Changes
+          \`\`\`javascript
+          // AI-suggested fixes would appear here
+          \`\`\`
+          
+          ### Next Steps
+          1. Review the suggested fixes
+          2. Apply them if they look correct
+          3. Re-run tests to verify
+          
+          **Note:** This is an automated analysis. Please review all changes before applying.
+          `;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
