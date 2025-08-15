@@ -1,11 +1,27 @@
 {
-  "name": "demo-app",
+  "name": "self-heal-mvp",
   "version": "1.0.0",
-  "type": "commonjs",
+  "description": "AI-Powered Self-Healing Code Platform",
+  "main": "web-dashboard/server.js",
   "scripts": {
-    "test": "jest"
+    "start": "cd web-dashboard && npm start",
+    "install-deps": "cd web-dashboard && npm install",
+    "build": "cd web-dashboard && npm install",
+    "dev": "cd web-dashboard && npm run dev"
   },
-  "devDependencies": {
-    "jest": "^29.6.4"
+  "keywords": [
+    "ai",
+    "code-analysis",
+    "bug-detection",
+    "self-healing",
+    "javascript",
+    "python",
+    "java"
+  ],
+  "author": "SteveUseful",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }
