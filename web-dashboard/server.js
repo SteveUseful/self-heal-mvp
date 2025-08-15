@@ -127,11 +127,75 @@ app.post('/api/heal', async (req, res) => {
     const demoAppPath = path.resolve(__dirname, '../demo-app');
     const selfHealingPath = path.resolve(__dirname, '../self-healing');
     
+    // Check if LLM is available
+    const llmMode = process.env.LLM_MODE || 'demo';
+    
+    if (llmMode === 'demo') {
+      // Provide a demo response when LLM is not available
+      const demoResponse = {
+        success: true,
+        fixedCode: `// Demo fix - LLM not configured
+function sumArray(a) {
+  if (!Array.isArray(a) || a.length === 0) {
+    return 0;
+  }
+  return a.reduce((sum, n) => sum + n, 0);
+}
+
+function findMax(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) {
+    return undefined;
+  }
+  return Math.max(...arr);
+}
+
+function validateEmail(email) {
+  const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return regex.test(email);
+}
+
+function asyncOperation(data) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      if (data && typeof data === 'number') {
+        resolve(data * 2);
+      } else {
+        reject(new Error("Invalid data provided"));
+      }
+    }, 100);
+  });
+}
+
+function processUser(user) {
+  if (!user) {
+    return undefined;
+  }
+  return {
+    name: user.name ? user.name.toUpperCase() : "",
+    age: user.age || 0,
+    email: user.email ? user.email.toLowerCase() : ""
+  };
+}
+
+module.exports = { 
+  sumArray, 
+  findMax, 
+  validateEmail, 
+  asyncOperation, 
+  processUser 
+};`,
+        output: "Demo mode: Applied sample fixes. Configure LLM_MODE for real AI-powered fixes.",
+        demo: true
+      };
+      
+      return res.json(demoResponse);
+    }
+    
     // Run the self-healing agent
     const result = await execa('node', ['agent.js'], { 
       cwd: selfHealingPath,
       stdio: 'pipe',
-      env: { ...process.env, LLM_MODE: 'ollama' }
+      env: { ...process.env, LLM_MODE: llmMode }
     });
     
     // Read the fixed code
@@ -143,10 +207,12 @@ app.post('/api/heal', async (req, res) => {
       output: result.stdout
     });
   } catch (error) {
+    console.error('Healing error:', error);
     res.json({
       success: false,
       error: error.message,
-      output: error.stdout || error.stderr
+      output: error.stdout || error.stderr,
+      demo: false
     });
   }
 });
@@ -173,6 +239,65 @@ app.post('/api/analyze', async (req, res) => {
   try {
     const { code, language = 'javascript' } = req.body;
     
+    // Check if LLM is available
+    const llmMode = process.env.LLM_MODE || 'demo';
+    
+    if (llmMode === 'demo') {
+      // Provide demo analysis results
+      const demoAnalysis = `🔍 **DEMO ANALYSIS RESULTS**
+
+🐛 **Static Analysis Found 3 Potential Issues**
+
+**WARNING**: Potential Null Reference
+**File**: temp.js
+**Line**: 15
+**Description**: Potential null reference detected
+**Code**: \`user.name.toUpperCase()\`
+**Suggestion**: user?.name?.toUpperCase()
+
+**WARNING**: Unhandled Promise
+**File**: temp.js
+**Line**: 8
+**Description**: Potential unhandled promise detected
+**Code**: \`new Promise((resolve)\`
+**Suggestion**: Add .catch() handler
+
+**WARNING**: Memory Leak
+**File**: temp.js
+**Line**: 22
+**Description**: Potential memory leak detected
+**Code**: \`addEventListener\`
+**Suggestion**: Consider removing event listener
+
+🔒 **Security Analysis Found 1 Issue**
+
+**MEDIUM**: Insecure HTTP
+**File**: temp.js
+**Line**: 5
+**Description**: Insecure HTTP protocol usage
+**Code**: \`http://api.example.com\`
+**Suggestion**: Use HTTPS for all external requests
+
+🏗️ **Architectural Analysis Found 1 Issue**
+
+**MEDIUM**: God Object
+**File**: temp.js
+**Line**: 1
+**Description**: Class has too many responsibilities
+**Suggestion**: Consider breaking into smaller, focused classes
+
+📊 **Summary**: Found 5 total issues to address
+
+💡 **Demo Mode**: This is a sample analysis. Configure LLM_MODE for real AI-powered analysis.`;
+      
+      return res.json({
+        success: true,
+        analysis: demoAnalysis,
+        language: language,
+        demo: true
+      });
+    }
+    
     // Create temporary file for analysis
     const tempDir = path.join(__dirname, 'temp');
     if (!fs.existsSync(tempDir)) {
@@ -189,7 +314,7 @@ app.post('/api/analyze', async (req, res) => {
       stdio: 'pipe',
       env: { 
         ...process.env, 
-        LLM_MODE: 'ollama',
+        LLM_MODE: llmMode,
         TEMP_FILE: tempFile,
         ANALYSIS_ONLY: 'true'
       }
@@ -201,13 +326,16 @@ app.post('/api/analyze', async (req, res) => {
     res.json({
       success: true,
       analysis: result.stdout,
-      language: language
+      language: language,
+      demo: false
     });
   } catch (error) {
+    console.error('Analysis error:', error);
     res.json({
       success: false,
       error: error.message,
-      analysis: error.stdout || error.stderr
+      analysis: error.stdout || error.stderr,
+      demo: false
     });
   }
 });

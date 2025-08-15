@@ -337,6 +337,11 @@
         </div>
         
         <div class="main-content">
+            <div id="demoBanner" class="status warning" style="display: none;">
+                <i class="fas fa-info-circle"></i>
+                <strong>Demo Mode:</strong> This platform is running in demo mode. Configure LLM_MODE environment variable for real AI-powered analysis and fixes.
+            </div>
+            
             <div class="toolbar">
                 <select id="languageSelect" class="language-selector">
                     <option value="javascript">JavaScript</option>
@@ -466,6 +471,7 @@
         // DOM elements
         const statusEl = document.getElementById('status');
         const languageSelect = document.getElementById('languageSelect');
+        const demoBanner = document.getElementById('demoBanner');
         
         // Functions
         function updateStatus(message, type = 'info') {
@@ -600,44 +606,110 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    updateStatus('Analysis completed!', 'success');
-                    addLog('Analysis completed successfully', 'success');
+                    if (result.demo) {
+                        updateStatus('Demo mode: Analysis completed!', 'warning');
+                        addLog('Demo mode: Sample analysis results (configure LLM for real AI)', 'warning');
+                        demoBanner.style.display = 'block';
+                    } else {
+                        updateStatus('Analysis completed!', 'success');
+                        addLog('Analysis completed successfully', 'success');
+                        demoBanner.style.display = 'none';
+                    }
                     
                     // Parse and display analysis results
                     displayAnalysisResults(result.analysis);
                 } else {
                     updateStatus('Analysis failed', 'error');
                     addLog(`Analysis failed: ${result.error}`, 'error');
+                    demoBanner.style.display = 'none';
                 }
             } catch (error) {
                 updateStatus('Error during analysis', 'error');
                 addLog(`Error: ${error.message}`, 'error');
+                demoBanner.style.display = 'none';
             }
         }
         
         function displayAnalysisResults(analysis) {
-            // This is a simplified display - in a real implementation,
-            // you'd parse the analysis output and display it properly
-            document.getElementById('staticAnalysis').innerHTML = `
-                <div class="issue-item medium">
-                    <div class="issue-title">Analysis Completed</div>
-                    <div class="issue-description">Found potential issues in your code. Check the logs for details.</div>
-                </div>
-            `;
+            // Parse the analysis text and display it properly
+            const lines = analysis.split('\n');
+            let staticIssues = [];
+            let securityIssues = [];
+            let architecturalIssues = [];
             
-            document.getElementById('securityAnalysis').innerHTML = `
-                <div class="issue-item low">
-                    <div class="issue-title">Security Scan Complete</div>
-                    <div class="issue-description">No critical security vulnerabilities found.</div>
-                </div>
-            `;
+            let currentSection = '';
             
-            document.getElementById('architecturalAnalysis').innerHTML = `
-                <div class="issue-item low">
-                    <div class="issue-title">Architecture Review Complete</div>
-                    <div class="issue-description">Code structure looks good.</div>
-                </div>
-            `;
+            lines.forEach(line => {
+                if (line.includes('Static Analysis')) {
+                    currentSection = 'static';
+                } else if (line.includes('Security Analysis')) {
+                    currentSection = 'security';
+                } else if (line.includes('Architectural Analysis')) {
+                    currentSection = 'architectural';
+                } else if (line.includes('**WARNING**') || line.includes('**ERROR**') || line.includes('**MEDIUM**') || line.includes('**HIGH**') || line.includes('**CRITICAL**')) {
+                    const issue = {
+                        type: line.includes('**WARNING**') ? 'warning' : 
+                              line.includes('**ERROR**') ? 'error' : 
+                              line.includes('**CRITICAL**') ? 'critical' : 'medium',
+                        description: line.replace(/\*\*.*?\*\*/, '').trim()
+                    };
+                    
+                    if (currentSection === 'static') staticIssues.push(issue);
+                    else if (currentSection === 'security') securityIssues.push(issue);
+                    else if (currentSection === 'architectural') architecturalIssues.push(issue);
+                }
+            });
+            
+            // Display static analysis
+            if (staticIssues.length > 0) {
+                document.getElementById('staticAnalysis').innerHTML = staticIssues.map(issue => `
+                    <div class="issue-item ${issue.type}">
+                        <div class="issue-title">${issue.description}</div>
+                        <div class="issue-description">Static analysis detected potential issue.</div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('staticAnalysis').innerHTML = `
+                    <div class="issue-item low">
+                        <div class="issue-title">✅ No Static Issues Found</div>
+                        <div class="issue-description">Your code looks good from a static analysis perspective.</div>
+                    </div>
+                `;
+            }
+            
+            // Display security analysis
+            if (securityIssues.length > 0) {
+                document.getElementById('securityAnalysis').innerHTML = securityIssues.map(issue => `
+                    <div class="issue-item ${issue.type}">
+                        <div class="issue-title">${issue.description}</div>
+                        <div class="issue-description">Security analysis detected potential vulnerability.</div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('securityAnalysis').innerHTML = `
+                    <div class="issue-item low">
+                        <div class="issue-title">✅ No Security Issues Found</div>
+                        <div class="issue-description">No security vulnerabilities detected.</div>
+                    </div>
+                `;
+            }
+            
+            // Display architectural analysis
+            if (architecturalIssues.length > 0) {
+                document.getElementById('architecturalAnalysis').innerHTML = architecturalIssues.map(issue => `
+                    <div class="issue-item ${issue.type}">
+                        <div class="issue-title">${issue.description}</div>
+                        <div class="issue-description">Architectural analysis detected potential issue.</div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('architecturalAnalysis').innerHTML = `
+                    <div class="issue-item low">
+                        <div class="issue-title">✅ No Architectural Issues Found</div>
+                        <div class="issue-description">Code architecture looks good.</div>
+                    </div>
+                `;
+            }
         }
         
         async function runTests() {
@@ -682,8 +754,13 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    updateStatus('Bug fixed successfully! 🎉', 'success');
-                    addLog('AI successfully applied fix!', 'success');
+                    if (result.demo) {
+                        updateStatus('Demo mode: Applied sample fixes! 🎉', 'warning');
+                        addLog('Demo mode: Applied sample fixes (configure LLM for real AI)', 'warning');
+                    } else {
+                        updateStatus('Bug fixed successfully! 🎉', 'success');
+                        addLog('AI successfully applied fix!', 'success');
+                    }
                     fixedCodeEditor.setValue(result.fixedCode);
                 } else {
                     updateStatus('Healing failed. Check logs for details.', 'error');
@@ -730,6 +807,32 @@
         // Initialize
         updateCodeMirrorMode();
         loadDemoCode();
+        
+        // Check if we're in demo mode
+        checkDemoMode();
+        
+        async function checkDemoMode() {
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        code: '// Demo check', 
+                        language: 'javascript' 
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.demo) {
+                    demoBanner.style.display = 'block';
+                    addLog('Platform running in demo mode', 'warning');
+                }
+            } catch (error) {
+                // Silently fail - this is just a demo mode check
+            }
+        }
     </script>
 </body>
 </html>
